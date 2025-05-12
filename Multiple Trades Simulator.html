@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Balance Curve Simulator (Combined)</title>
+  <title>Balance Curve Simulator</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@1.4.0"></script>
   <style>
@@ -139,6 +139,7 @@
 
       const seen = new Set();
       const datasets = [];
+      const allHistories = [];
 
       while (datasets.length < numSamples) {
         const shuffled = [...baseOutcomes];
@@ -164,10 +165,12 @@
           history.push(balance);
         });
 
+        allHistories.push(history);
+
         datasets.push({
           label: `Scenario ${datasets.length + 1}`,
           data: history,
-          borderColor: 'rgba(0, 0, 0, 0.04)',
+          borderColor: 'rgba(0, 0, 0, 0.01)',
           borderWidth: 1,
           fill: false,
           pointRadius: 0,
@@ -175,7 +178,25 @@
         });
       }
 
-      // Manual sequence
+      const length = numPositions + 1;
+      const averageHistory = [];
+
+      for (let i = 0; i < length; i++) {
+        const values = allHistories.map(h => h[i]);
+        const mean = values.reduce((a, b) => a + b, 0) / values.length;
+        averageHistory.push(mean);
+      }
+
+      datasets.push({
+        label: 'Average Scenario',
+        data: averageHistory,
+        borderColor: 'rgba(0, 191, 255, 1)',
+        borderWidth: 2,
+        fill: false,
+        pointRadius: 0,
+        tension: 0
+      });
+
       let manualBalance = initialBalance;
       const manualHistory = [manualBalance];
       manualSequence.forEach(outcome => {
@@ -191,8 +212,8 @@
       datasets.push({
         label: 'Manual Sequence',
         data: manualHistory,
-        borderColor: 'rgba(255, 140, 0, 1)',
-        borderWidth: 5,
+        borderColor: 'rgba(0, 0, 0, 1)',
+        borderWidth: 2,
         fill: false,
         pointRadius: 0,
         tension: 0
@@ -208,7 +229,7 @@
       chart = new Chart(ctx, {
         type: 'line',
         data: {
-          labels: Array(Math.max(numPositions, manualSequence.length) + 1).fill(0).map((_, i) => i),
+          labels: Array(length).fill(0).map((_, i) => i),
           datasets: datasets
         },
         options: {
@@ -216,7 +237,7 @@
             legend: { display: false },
             tooltip: { enabled: false },
             annotation: {
-             annotations: {
+              annotations: {
                 initialLine: {
                   type: 'line',
                   yMin: initialBalance,
@@ -252,7 +273,7 @@
         }
       });
 
-      const avgFinal = (datasets.slice(0, -1).reduce((acc, d) => acc + d.data[d.data.length - 1], 0) / (datasets.length - 1)).toFixed(2);
+      const avgFinal = (allHistories.reduce((acc, d) => acc + d[d.length - 1], 0) / allHistories.length).toFixed(2);
       const avgPercentChange = (((avgFinal - initialBalance) / initialBalance) * 100).toFixed(2);
 
       document.getElementById('summaryTable').innerHTML = `
